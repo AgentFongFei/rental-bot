@@ -119,12 +119,12 @@ def test_bearing_names():
     assert orientation.bearing_to_dir(350) == "北"
 
 
-def test_ranking_prefers_gas_stove_then_known_orientation():
-    a = listing(id="a", orientation={"source": "無資料"})
-    b = listing(id="b", text="可開伙\n附瓦斯爐", orientation={"source": "無資料"})
-    c = listing(id="c", orientation={"source": "刊登資料"})
+def test_ranking_by_total_monthly_cost():
+    a = listing(id="a", price=23000)
+    b = listing(id="b", price=20000, fields={"車位": "平面式", "管理費": "2,000元/月"})
+    c = listing(id="c", price=21000, text="可開伙\n附瓦斯爐")
     ranked = sorted([a, b, c], key=lambda x: filters.score(x, CFG))
-    assert [x["id"] for x in ranked] == ["b", "c", "a"]
+    assert [x["id"] for x in ranked] == ["c", "b", "a"]
 
 
 def test_orientation_from_facing_field():

@@ -67,11 +67,8 @@ def check(listing: dict, cfg: dict) -> list[str]:
 
 
 def score(listing: dict, cfg: dict) -> tuple:
-    """Sort key: lower is better."""
-    orientation = listing.get("orientation") or {}
+    """Sort key: cheapest total monthly cost (rent + 管理費 + 車位費) first."""
     return (
-        0 if cfg.get("prefer", {}).get("gas_stove") and has_gas_stove(listing) else 1,
-        {"刊登資料": 0, "同社區資料": 1, "地圖推估": 2}.get(orientation.get("source"), 3),
         listing.get("price", 0) + listing.get("extra_fees", 0),
-        -float(listing.get("area_ping") or 0),
+        0 if cfg.get("prefer", {}).get("gas_stove") and has_gas_stove(listing) else 1,
     )
