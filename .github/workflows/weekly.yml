@@ -26,9 +26,14 @@ jobs:
           PYTHONUNBUFFERED: "1"
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
       - name: Save seen listings
         run: |
           git config user.name "rental-bot"
           git config user.email "rental-bot@users.noreply.github.com"
           git add data/
-          git diff --cached --quiet || git commit -m "Update seen listings" && git push
+          git diff --cached --quiet && exit 0
+          git commit -m "Update seen listings"
+          git pull --rebase origin main
+          git push

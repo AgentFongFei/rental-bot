@@ -107,12 +107,6 @@ def test_districts():
     assert not filters.in_districts({"district": "香山區-中華路"}, ["東區", "北區"])
 
 
-def test_orientation_from_listing_text():
-    assert orientation.from_text("屋況佳 坐西朝東 採光好") == {"door": "坐西朝東", "source": "刊登資料"}
-    assert orientation.from_text("朝向：南東")["door"] == "坐西北朝東南"
-    assert orientation.from_text("面向公園") is None
-
-
 def test_bearing_names():
     assert orientation.bearing_to_dir(0) == "北"
     assert orientation.bearing_to_dir(135) == "東南"
@@ -127,9 +121,50 @@ def test_ranking_by_total_monthly_cost():
     assert [x["id"] for x in ranked] == ["c", "b", "a"]
 
 
-def test_orientation_from_facing_field():
-    assert orientation.resolve({"facing": "坐西朝東"}, "苗栗縣")["door"] == "坐西朝東"
-    assert orientation.resolve({"facing": "朝南"}, "苗栗縣")["door"] == "坐北朝南"
+def test_gate_faces_back_toward_the_camera():
+    # Camera on the road south-west of the building looks north-east at it.
+    assert orientation.facing_from_camera(45) == "西南"
+
+
+SHOTS = [{"road": "昌隆一街", "heading": 315}, {"road": "民族路394巷", "heading": 45}]
+ROADS = {"昌隆一街": [(24.6870, 120.9130)], "民族路394巷": [(24.6855, 120.9115)]}
+
+
+def test_street_view_and_text_agree_is_certain():
+    r = orientation.combine(1, "high", "民族路394巷", SHOTS, 24.686, 120.912, ROADS)
+    assert r == {"dir": "西南", "road": "民族路394巷", "level": "確定", "how": "街景＋文字資料"}
+
+
+def test_street_view_alone_is_estimate():
+    r = orientation.combine(0, "high", "", SHOTS, 24.686, 120.912, ROADS)
+    assert (r["dir"], r["level"], r["how"]) == ("東南", "推估", "街景")
+
+
+def test_disagreeing_sources_is_estimate():
+    assert orientation.combine(0, "high", "民族路394巷", SHOTS, 24.686, 120.912, ROADS)["level"] == "推估"
+
+
+def test_text_alone_uses_road_side():
+    r = orientation.combine(-1, "none", "民族路394巷", [], 24.686, 120.912, ROADS)
+    assert (r["dir"], r["level"], r["how"]) == ("西南", "推估", "文字資料")
+
+
+def test_nothing_found():
+    assert orientation.combine(-1, "none", "", [], 24.686, 120.912, ROADS) is None
+    assert orientation.describe(None) == "查無資料"
+
+
+def test_describe():
+    part = {"dir": "西南", "road": "民族路394巷", "level": "確定", "how": "街景＋文字資料"}
+    assert orientation.describe(part) == "朝西南（民族路394巷側）｜確定，依街景＋文字資料"
+
+
+def test_research_is_cached_unless_empty_and_old(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    found = {"checked": "2026-10-01", "gate": {"dir": "東"}, "driveway": {"dir": "西"}}
+    assert not orientation.needs_research(found)
+    assert orientation.needs_research(None)
+    assert orientation.needs_research({"checked": "2026-01-01", "gate": None, "driveway": None})
 
 
 def test_list_url():
@@ -157,7 +192,8 @@ def test_parse_list_html():
 def test_telegram_message_splits_and_escapes():
     xs = [listing(id=str(i), title=f"A&B {i}", link="https://rent.591.com.tw/1",
                   layout="2房", area_ping="20", floor="3F/5F",
-                  orientation={"door": "坐西朝東", "source": "刊登資料"}) for i in range(20)]
+                  orientation={"gate": {"dir": "東", "road": "大埔街", "level": "確定", "how": "街景＋文字資料"},
+                               "driveway": None}) for i in range(20)]
     msgs = telegram.build_messages("header", xs)
     assert all(len(m) <= 4096 for m in msgs)
     assert "A&amp;B 0" in msgs[0]

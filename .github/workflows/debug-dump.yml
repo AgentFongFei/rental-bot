@@ -1,7 +1,16 @@
 name: debug-dump
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      community:
+        description: "只試查一個社區的坐向，例如 上賀（留空則存 591 網頁）"
+        required: false
+        default: ""
+      town:
+        description: "鄉鎮，例如 頭份市"
+        required: false
+        default: "頭份市"
 
 permissions:
   contents: write
@@ -18,7 +27,15 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - run: python -m playwright install --with-deps chromium
-      - run: python debug_dump.py debug
+      - if: ${{ inputs.community == '' }}
+        run: python debug_dump.py debug
+      - if: ${{ inputs.community != '' }}
+        run: python trial_community.py "$COMMUNITY" "$TOWN"
+        env:
+          COMMUNITY: ${{ inputs.community }}
+          TOWN: ${{ inputs.town }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
       - name: Push dumps to the debug-dumps branch
         run: |
           git config user.name "rental-bot"

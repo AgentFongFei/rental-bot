@@ -62,11 +62,18 @@ def collect(cfg: dict, seen: set[str]) -> list[dict]:
                         print(f"  ✗ {x['id']} {x['title'][:20]}：{'、'.join(reasons)}")
                         continue
                     x["gas_stove"] = filters.has_gas_stove(x)
-                    x["orientation"] = orientation.resolve(x, COUNTY.get(area["region"], ""))
                     print(f"  ✓ {x['id']} {x['title'][:20]}")
                     picks.append(x)
     picks.sort(key=lambda x: filters.score(x, cfg))
-    return picks[: cfg["weekly_count"]]
+    picks = picks[: cfg["weekly_count"]]
+
+    # Gate / driveway orientation, researched once per community and cached.
+    cache = orientation.load_cache()
+    for x in picks:
+        town = x.get("district", "").split("-")[0]
+        x["orientation"] = orientation.lookup(x.get("community", ""), town, cache)
+    orientation.save_cache(cache)
+    return picks
 
 
 def main() -> int:

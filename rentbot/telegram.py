@@ -7,6 +7,8 @@ import time
 
 import requests
 
+from rentbot import orientation
+
 _MAX_LEN = 4000  # Telegram caps a message at 4096 characters
 
 
@@ -21,16 +23,16 @@ def format_listing(n: int, x: dict) -> str:
     if x.get("parking_fee_unknown"):
         price += "（車位費另計，金額未標示）"
     o = x.get("orientation") or {}
-    door = f"{o.get('door', '未標示')}（{o.get('source', '無資料')}）"
-    parking_dir = o.get("parking", "未標示，請問房東車道入口方向")
+    community = x.get("community") or "591 未標社區名稱"
     return "\n".join([
         f"<b>{n}. {e(x['title'])}</b>",
         f"💰 {price}",
         f"📍 {e(x.get('district', ''))}｜{e(x.get('layout', ''))}｜{e(str(x.get('area_ping', '')))}坪｜{e(x.get('floor', ''))}",
         f"🚗 {x.get('parking') or '?'}車位  🛏 床{_yes('床' in x.get('facilities', set()))}  "
         f"🔥 瓦斯爐{_yes(x.get('gas_stove', False))}",
-        f"🧭 大門：{e(door)}",
-        f"🅿️ 車位：{e(parking_dir)}",
+        f"🏢 社區：{e(community)}",
+        f"🧭 大門：{e(orientation.describe(o.get('gate')))}",
+        f"🅿️ 車道口：{e(orientation.describe(o.get('driveway')))}",
         f'🔗 <a href="{x["link"]}">591 物件頁</a>',
     ])
 
