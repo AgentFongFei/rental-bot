@@ -131,8 +131,10 @@ class Scraper:
         self._pw.stop()
 
     def _open(self, url: str) -> bool:
+        # 591 keeps ads and trackers polling, so "networkidle" never fires and
+        # every page would hit the timeout. Wait for the DOM, then a fixed pause.
         try:
-            self.page.goto(url, wait_until="networkidle", timeout=45000)
+            self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
         except Exception as e:  # noqa: BLE001
             print(f"[scraper] 載入失敗 {url}: {e}")
             return False
@@ -144,6 +146,10 @@ class Scraper:
         for n in range(1, max_pages + 1):
             if not self._open(url if n == 1 else f"{url}&page={n}"):
                 break
+            try:
+                self.page.wait_for_selector("div.item[data-id]", timeout=15000)
+            except Exception:  # noqa: BLE001
+                print(f"[scraper] 列表沒有物件或版面改了：{self.page.url}")
             items, total = parse_list_html(self.page.content())
             out.extend(items)
             if not items or n >= total:
