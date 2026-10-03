@@ -59,6 +59,10 @@ def test_empty_unit_rejected():
     assert "空屋無家具" in filters.check(listing(title="２房空屋，可租補"), CFG)
 
 
+def test_other_ads_on_page_saying_empty_do_not_reject():
+    assert filters.check(listing(text="可開伙\n推薦物件\n全新2房空屋出租"), CFG) == []
+
+
 def test_greyed_out_bed_rejected():
     assert "沒有床" in filters.check(listing(missing=["床"]), CFG)
 

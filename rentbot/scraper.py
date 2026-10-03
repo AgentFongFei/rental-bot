@@ -167,6 +167,8 @@ class Scraper:
         """Parsed detail page, or None when it never finished rendering."""
         if not self._open(listing["link"]):
             return None
+        if not self._wait(".facility dl"):
+            self.page.reload(wait_until="domcontentloaded")
         if not self._wait(".facility dl") or not self._wait("span.label"):
             print(f"[scraper] 物件頁沒載入完成，略過：{listing['link']}")
             return None

@@ -55,7 +55,8 @@ def check(listing: dict, cfg: dict) -> list[str]:
             reasons.append("機械車位")
         elif kind != "平面":
             reasons.append("沒有平面車位")
-    if _RE_EMPTY_UNIT.search(listing.get("title", "") + text):
+    # Title only: the page body also shows other ads ("推薦物件"), which may say 空屋.
+    if _RE_EMPTY_UNIT.search(listing.get("title", "")):
         reasons.append("空屋無家具")
     if req.get("bed") and "床" not in facilities:
         reasons.append("沒有床")
