@@ -95,6 +95,19 @@ def test_real_page_mechanical_parking():
     assert page("detail_mechanical")["parking"] == "機械"
 
 
+def test_community_official_link_vs_typed_text():
+    official = page("detail_flat_parking_orientation")
+    assert (official["community"], bool(official["community_url"])) == ("富比市", True)
+    typed = page("detail_mechanical")
+    assert (typed["community"], typed["community_url"]) == ("興築家黃先生", "")
+
+
+def test_nav_link_to_market_site_is_not_the_community():
+    html = ('<a href="https://market.591.com.tw/">實價登錄</a>'
+            '<p><span>所屬社區:</span><a href="https://market.591.com.tw/5934315#onsale">昌隆廣場-上賀</a></p>')
+    assert parse_detail(html, "")["community"] == "昌隆廣場-上賀"
+
+
 def test_real_page_missing_wardrobe_and_table():
     d = page("detail_empty_unit")
     assert "衣櫃" not in d["facilities"] and "桌椅" not in d["facilities"]

@@ -24,10 +24,14 @@ def format_listing(n: int, x: dict) -> str:
         price += "（車位費另計，金額未標示）"
     o = x.get("orientation") or {}
     community = x.get("community") or "591 未標社區名稱"
+    if x.get("community") and not x.get("community_url"):
+        community += "（刊登者自填）"
     return "\n".join([
         f"<b>{n}. {e(x['title'])}</b>",
         f"💰 {price}",
-        f"📍 {e(x.get('district', ''))}｜{e(x.get('layout', ''))}｜{e(str(x.get('area_ping', '')))}坪｜{e(x.get('floor', ''))}",
+        "📍 " + "｜".join(e(v) for v in (
+            x.get("district", ""), x.get("layout", ""),
+            f"{x['area_ping']}坪" if x.get("area_ping") else "", x.get("floor", "")) if v),
         f"🚗 {x.get('parking') or '?'}車位  🛏 床{_yes('床' in x.get('facilities', set()))}  "
         f"🔥 瓦斯爐{_yes(x.get('gas_stove', False))}",
         f"🏢 社區：{e(community)}",

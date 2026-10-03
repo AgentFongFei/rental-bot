@@ -94,7 +94,18 @@ def parse_detail(html: str, text: str) -> dict:
             facilities.add(re.sub(r"^\d+", "", name))  # "2陽台" -> "陽台"
 
     address_el = soup.select_one('[data-gtm-behavior="address"]')
-    community_el = soup.select_one('a[href*="market.591.com.tw"]')
+    # "所屬社區": a link to 591's community page when it is an official community,
+    # otherwise whatever the poster typed. (Other links on the page also point at
+    # market.591.com.tw, e.g. the 實價登錄 nav link, so match on the label.)
+    community, community_url = "", ""
+    for p in soup.select("p"):
+        if p.get_text(strip=True).startswith("所屬社區"):
+            link = p.find("a")
+            community = (link.get_text(strip=True) if link else p.get_text(" ", strip=True).split(":", 1)[-1]).strip()
+            community_url = link.get("href", "") if link else ""
+            break
+    if community in ("無", "-", "—"):
+        community = ""
 
     parking_fee = fields.get("車位租金", "")
     return {
@@ -102,8 +113,8 @@ def parse_detail(html: str, text: str) -> dict:
         "fields": fields,
         "facilities": facilities,
         "address": address_el.get_text(strip=True) if address_el else "",
-        "community": community_el.get_text(strip=True) if community_el else "",
-        "community_url": community_el.get("href", "") if community_el else "",
+        "community": community,
+        "community_url": community_url,
         "parking": parking_type(fields.get("車位", "")) or parking_type(facility_parking),
         "extra_fees": _fee(fields.get("管理費", "")) + _fee(parking_fee),
         "parking_fee_unknown": "另計" in parking_fee and not _fee(parking_fee),
