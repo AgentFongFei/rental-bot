@@ -4,8 +4,9 @@
 regions:
   - region: 7          # 苗栗縣
     districts: [竹南鎮, 頭份市]
-  - region: 4          # 新竹市
-    districts: [東區, 北區]
+  # 新竹市先暫停（2026-10-03），要恢復時把下面兩行前面的 # 拿掉
+  # - region: 4          # 新竹市
+  #   districts: [東區, 北區]
 
 # 591 物件類型：1 = 整層住家，2 = 獨立套房
 searches:
