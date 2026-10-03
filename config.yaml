@@ -1,0 +1,34 @@
+# 搜尋條件：改這個檔案就能調整機器人要找什麼
+
+# 591 縣市代碼與要保留的鄉鎮區（列表上的「區域-路名」前半段）
+regions:
+  - region: 7          # 苗栗縣
+    districts: [竹南鎮, 頭份市]
+  - region: 4          # 新竹市
+    districts: [東區, 北區]
+
+# 591 物件類型：1 = 整層住家，2 = 獨立套房
+searches:
+  - name: 兩房整層
+    kind: 1
+    rooms: 2           # 591 的 layout 參數，2 = 兩房
+  - name: 獨立套房
+    kind: 2
+
+max_rent: 25000        # 月租上限（元）
+# 管理費、另計的車位費加上去後的「實際月付」也不能超過這個數字
+count_extra_fees: true
+
+require:
+  elevator: true       # 電梯
+  cooking: true        # 可開伙
+  flat_parking: true   # 平面車位（機械式會被剔除）
+  bed: true            # 床（床架＋床墊）
+  basic_furniture: [衣櫃, 桌椅]   # 至少要有的家具
+
+prefer:
+  gas_stove: true      # 有瓦斯爐台加分
+
+weekly_count: 20       # 每週推薦幾筆
+max_pages_per_search: 5
+request_delay_seconds: 3
