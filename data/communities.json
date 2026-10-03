@@ -1,1 +1,22 @@
-{}
+{
+  "頭份市/昌隆廣場-上賀": {
+    "checked": "2026-10-03",
+    "location": null,
+    "gate": null,
+    "driveway": {"dir": "西南", "road": "民族路394巷", "level": "推估", "how": "網路摘要（引樂屋網、JR預售屋資訊站），未經街景驗證"},
+    "sources": ["https://hsinchu.housetube.tw/46602"],
+    "evidence": "車道在民族路394巷側朝西南；大門路段（昌隆二街/昌隆一街/民族路394巷）來源未明指，留空",
+    "street_view_photos": 0,
+    "note": "基地在昌隆二街與民族路394巷交叉口"
+  },
+  "頭份市/昌隆廣場-上慶": {
+    "checked": "2026-10-03",
+    "location": null,
+    "gate": null,
+    "driveway": {"dir": "", "road": "和平路", "level": "推估", "how": "文字資料（樂居部落格：車道規劃從和平路進出）"},
+    "sources": ["https://www.leju.com.tw/page_blog/view/1251"],
+    "evidence": "只寫車道從和平路進出，未寫朝向，也沒寫大門",
+    "street_view_photos": 0,
+    "note": ""
+  }
+}
