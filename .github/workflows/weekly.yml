@@ -3,7 +3,12 @@ name: weekly-rental-search
 on:
   schedule:
     - cron: "0 1 * * 6"   # 每週六 09:00（台灣時間）
-  workflow_dispatch: {}     # 也可以在 GitHub 上手動按一下執行
+  workflow_dispatch:        # 也可以在 GitHub 上手動按一下執行
+    inputs:
+      dry_run:
+        description: "只列出結果，不傳 Telegram、不記錄已推薦"
+        type: boolean
+        default: false
 
 permissions:
   contents: write           # 需要把 data/seen.json 存回 repo，避免重複推薦
@@ -21,7 +26,7 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m playwright install --with-deps chromium
       - run: python -m pytest -q
-      - run: python main.py
+      - run: python main.py ${{ inputs.dry_run && '--dry-run' || '' }}
         env:
           PYTHONUNBUFFERED: "1"
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

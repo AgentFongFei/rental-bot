@@ -346,6 +346,8 @@ def lookup(community: str, town: str, cache: dict) -> dict | None:
     if not community:
         return None
     key = f"{town}/{community}"
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return cache.get(key)  # no key: only use what is already in the cache
     if needs_research(cache.get(key)):
         print(f"[orientation] 查詢社區：{key}")
         cache[key] = research(community, town)

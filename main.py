@@ -88,7 +88,7 @@ def main() -> int:
             s.dump(*args.dump)
         return 0
 
-    seen = load_seen()
+    seen = set() if args.dry_run else load_seen()  # a dry run shows everything eligible
     picks = collect(cfg, seen)
     header = f"🏠 <b>{date.today():%m/%d} 本週租屋推薦</b>（{len(picks)} 筆）"
     if not picks:
