@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from rentbot import filters, orientation, telegram
 from rentbot.scraper import list_url, parse_detail, parse_list_html
 
@@ -8,14 +10,29 @@ CFG = {
                 "basic_furniture": ["衣櫃", "桌椅"]},
     "prefer": {"gas_stove": True},
 }
-FULL = {"冰箱": True, "洗衣機": True, "冷氣": True, "床": True, "衣櫃": True,
-        "桌椅": True, "天然瓦斯": True, "沙發": True, "電梯": True}
+FIXTURES = Path(__file__).parent / "fixtures"
+ALL_FACILITIES = ["冰箱", "洗衣機", "冷氣", "床", "衣櫃", "桌椅", "沙發", "電梯", "平面車位"]
 
 
-def listing(**kw):
+def page(name):
+    return parse_detail((FIXTURES / f"{name}.html").read_text(), (FIXTURES / f"{name}.txt").read_text())
+
+
+def fake_html(missing=(), fields=None):
+    dls = "".join(
+        f'<dl class="{"del" if f in missing else ""}"><dd class="text">{f}</dd></dl>' for f in ALL_FACILITIES
+    )
+    rows = "".join(
+        f'<div class="item"><span class="label">{k}</span><span class="value">{v}</span></div>'
+        for k, v in (fields or {"車位": "平面式"}).items()
+    )
+    return f'<div class="facility">{dls}</div><section class="detail-section">{rows}</section>'
+
+
+def listing(missing=(), fields=None, text="開伙\n可開伙", **kw):
     base = {"id": "1", "title": "全新兩房", "price": 22000, "district": "竹南鎮-大埔街",
-            "tags": ["電梯", "可開伙"]}
-    base.update(parse_detail(kw.pop("text", "車位\n平面式\n可開伙"), kw.pop("fac", FULL)))
+            "tags": ["有電梯", "可開伙"]}
+    base.update(parse_detail(fake_html(missing, fields), text))
     base.update(kw)
     return base
 
@@ -25,29 +42,59 @@ def test_passing_listing():
 
 
 def test_mechanical_parking_rejected():
-    assert "機械車位" in filters.check(listing(text="車位\n機械式\n可開伙"), CFG)
+    assert "機械車位" in filters.check(listing(fields={"車位": "機械式"}), CFG)
 
 
-def test_no_parking_info_rejected():
-    assert "沒有平面車位" in filters.check(listing(text="可開伙"), CFG)
+def test_no_parking_rejected():
+    assert "沒有平面車位" in filters.check(listing(missing=["平面車位"], fields={"車位": "無"}), CFG)
 
 
-def test_empty_unit_rejected_even_if_icons_present():
+def test_filter_menu_text_does_not_count_as_parking():
+    # The page's search menu says 平面車位; only the listing's own fields count.
+    x = listing(missing=["平面車位"], fields={"電梯": "有"}, text="篩選 平面車位 機械車位\n可開伙")
+    assert "沒有平面車位" in filters.check(x, CFG)
+
+
+def test_empty_unit_rejected():
     assert "空屋無家具" in filters.check(listing(title="２房空屋，可租補"), CFG)
 
 
 def test_greyed_out_bed_rejected():
-    assert "沒有床" in filters.check(listing(fac={**FULL, "床": False}), CFG)
+    assert "沒有床" in filters.check(listing(missing=["床"]), CFG)
 
 
-def test_extra_fees_push_over_budget():
-    x = listing(price=19800, text="車位\n平面式\n可開伙\n管理費3,450元/月\n車位費2,000元/月")
+def test_management_and_parking_fees_count_toward_budget():
+    x = listing(price=19800, fields={"車位": "平面式", "管理費": "3,450元/月", "車位租金": "2,000元/月"})
     assert x["extra_fees"] == 5450
     assert any("超過上限" in r for r in filters.check(x, CFG))
 
 
-def test_fee_included_in_rent_not_counted():
-    assert filters.extra_fees("租金含管理費1,500元") == 0
+def test_fee_none_or_included_is_zero():
+    x = listing(fields={"車位": "平面式", "管理費": "無", "車位租金": "已含"})
+    assert x["extra_fees"] == 0 and not x["parking_fee_unknown"]
+
+
+# Real 591 pages saved on 2026-10-03 (trimmed to the parts we read).
+
+def test_real_page_flat_parking_with_orientation():
+    d = page("detail_flat_parking_orientation")
+    assert d["parking"] == "平面"
+    assert d["facing"] == "坐西朝東"
+    assert d["community"] == "富比市"
+    assert d["address"] == "竹南鎮大埔街"
+    assert {"床", "衣櫃", "桌椅"} <= d["facilities"]
+    assert "天然瓦斯" not in d["facilities"]  # greyed out on this listing
+    assert d["parking_fee_unknown"]
+
+
+def test_real_page_mechanical_parking():
+    assert page("detail_mechanical")["parking"] == "機械"
+
+
+def test_real_page_missing_wardrobe_and_table():
+    d = page("detail_empty_unit")
+    assert "衣櫃" not in d["facilities"] and "桌椅" not in d["facilities"]
+    assert d["extra_fees"] == 1500
 
 
 def test_districts():
@@ -69,11 +116,16 @@ def test_bearing_names():
 
 
 def test_ranking_prefers_gas_stove_then_known_orientation():
-    a = listing(id="a", text="車位\n平面式\n可開伙", orientation={"source": "無資料"})
-    b = listing(id="b", text="車位\n平面式\n可開伙\n附瓦斯爐", orientation={"source": "無資料"})
-    c = listing(id="c", text="車位\n平面式\n可開伙", orientation={"source": "刊登資料"})
+    a = listing(id="a", orientation={"source": "無資料"})
+    b = listing(id="b", text="可開伙\n附瓦斯爐", orientation={"source": "無資料"})
+    c = listing(id="c", orientation={"source": "刊登資料"})
     ranked = sorted([a, b, c], key=lambda x: filters.score(x, CFG))
     assert [x["id"] for x in ranked] == ["b", "c", "a"]
+
+
+def test_orientation_from_facing_field():
+    assert orientation.resolve({"facing": "坐西朝東"}, "苗栗縣")["door"] == "坐西朝東"
+    assert orientation.resolve({"facing": "朝南"}, "苗栗縣")["door"] == "坐北朝南"
 
 
 def test_list_url():

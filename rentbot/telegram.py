@@ -18,6 +18,8 @@ def format_listing(n: int, x: dict) -> str:
     e = html.escape
     fees = x.get("extra_fees", 0)
     price = f"{x['price']:,}/月" + (f"（另有管理費/車位費約 {fees:,}）" if fees else "")
+    if x.get("parking_fee_unknown"):
+        price += "（車位費另計，金額未標示）"
     o = x.get("orientation") or {}
     door = f"{o.get('door', '未標示')}（{o.get('source', '無資料')}）"
     parking_dir = o.get("parking", "未標示，請問房東車道入口方向")

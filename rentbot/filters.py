@@ -7,7 +7,6 @@ import re
 _RE_PARKING_FLAT = re.compile(r"坡道平面|平面式|平面車位|平車")
 _RE_PARKING_MECH = re.compile(r"機械式|機械車位|升降")
 _RE_GAS_STOVE = re.compile(r"瓦斯爐|爐台|爐具")
-_RE_FEE = re.compile(r"(管理費|車位費|車位租金)\D{0,6}?([\d,]{3,6})\s*元")
 _RE_EMPTY_UNIT = re.compile(r"空屋|無家具|不含家具")
 
 
@@ -23,17 +22,6 @@ def parking_type(text: str) -> str | None:
     if _RE_PARKING_FLAT.search(text):
         return "平面"
     return None
-
-
-def extra_fees(text: str) -> int:
-    """Sum monthly fees that are charged on top of rent (管理費, 另計的車位費)."""
-    total = 0
-    for m in _RE_FEE.finditer(text):
-        context = text[max(0, m.start() - 8) : m.end() + 8]
-        if "含" in context and "另" not in context:
-            continue  # e.g. 租金含管理費
-        total += int(m.group(2).replace(",", ""))
-    return total
 
 
 def has_gas_stove(listing: dict) -> bool:
@@ -56,9 +44,10 @@ def check(listing: dict, cfg: dict) -> list[str]:
     elif total > cfg["max_rent"]:
         reasons.append(f"加管理費/車位費後 {total} 超過上限")
 
-    if req.get("elevator") and "電梯" not in facilities and "電梯" not in listing.get("tags", []):
+    tags = "、".join(listing.get("tags", []))
+    if req.get("elevator") and "電梯" not in facilities and "電梯" not in tags:
         reasons.append("沒有電梯")
-    if req.get("cooking") and "可開伙" not in text and "可開伙" not in listing.get("tags", []):
+    if req.get("cooking") and "可開伙" not in text and "可開伙" not in tags:
         reasons.append("不確定可開伙")
     if req.get("flat_parking"):
         kind = listing.get("parking")

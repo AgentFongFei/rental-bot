@@ -131,9 +131,13 @@ out geom;"""
 
 
 def resolve(listing: dict, county: str) -> dict:
-    text = listing.get("text", "")
     community = listing.get("community", "")
-    found = from_text(text)
+    facing = listing.get("facing", "")
+    found = (
+        from_text(facing)
+        or (from_text(f"朝向{facing}") if facing else None)
+        or from_text(listing.get("text", ""))
+    )
     if found:
         remember(community, found)
         return found

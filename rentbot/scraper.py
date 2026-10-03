@@ -21,37 +21,6 @@ _RE_PAGE = re.compile(r"page=(\d+)")
 _RE_PING = re.compile(r"([\d.]+)\s*坪")
 _RE_DISTRICT = re.compile(r"^[^\s]+?[鎮市區鄉][-—]")
 
-FACILITY_NAMES = [
-    "冰箱", "洗衣機", "電視", "冷氣", "熱水器", "床", "衣櫃", "第四台",
-    "網路", "天然瓦斯", "瓦斯爐", "沙發", "桌椅", "陽台", "電梯", "車位",
-]
-
-# Runs inside the detail page. 591 shows every facility icon and greys out the
-# ones that aren't provided, so we keep only the items that don't look disabled.
-_FACILITY_JS = """
-(names) => {
-  const looksOff = (el) => {
-    for (let n = el, i = 0; n && i < 4; n = n.parentElement, i++) {
-      const cls = (n.className && n.className.baseVal !== undefined) ? n.className.baseVal : (n.className || '');
-      if (/(^|[\\s_-])(del|disabled?|no|none|gray|grey|inactive|lack)([\\s_-]|$)/i.test(cls)) return true;
-      const st = getComputedStyle(n);
-      if (parseFloat(st.opacity) < 0.6 || st.textDecorationLine.includes('line-through')) return true;
-    }
-    return false;
-  };
-  const found = {};
-  for (const el of document.querySelectorAll('body *')) {
-    if (el.children.length) continue;
-    const t = (el.textContent || '').trim();
-    if (!names.includes(t)) continue;
-    const off = looksOff(el);
-    found[t] = (found[t] === true) || !off;
-  }
-  return found;
-}
-"""
-
-
 def list_url(region: int, kind: int, max_rent: int, rooms: int | None) -> str:
     url = f"{BASE_URL}/list?region={region}&kind={kind}&price=0$_{max_rent}$&other=lift,cook&option=bed"
     if rooms:
@@ -90,25 +59,55 @@ def parse_list_html(html: str) -> tuple[list[dict], int]:
     return results, max(nums) if nums else 1
 
 
-def _labelled(text: str, label: str) -> str:
-    """Value that follows a label on its own line, e.g. '車位\\n平面式'."""
-    m = re.search(rf"{label}\s*[:：]?\s*\n?\s*([^\n]{{1,40}})", text)
-    return m.group(1).strip() if m else ""
+def _fee(value: str) -> int:
+    """Monthly amount in a price field; 0 for 無 / 含 / 已含 / unknown."""
+    m = re.search(r"([\d,]{3,7})\s*元", value)
+    return int(m.group(1).replace(",", "")) if m else 0
 
 
-def parse_detail(text: str, facilities: dict[str, bool]) -> dict:
-    from rentbot.filters import extra_fees, parking_type
+def parse_detail(html: str, text: str) -> dict:
+    """Read a rendered 591 detail page.
 
-    community = _labelled(text, "社區")
-    address = _labelled(text, "地址")
-    parking_line = _labelled(text, "車位")
+    Layout as of 2026-10: facilities are `.facility dl` (class "del" = not
+    provided); the 房屋詳情/房屋價格 sections are `.item` rows of
+    `span.label` + `span.value`.
+    """
+    from rentbot.filters import parking_type
+
+    soup = BeautifulSoup(html, "html.parser")
+    fields: dict[str, str] = {}
+    for item in soup.select(".item"):
+        label, value = item.select_one("span.label"), item.select_one("span.value")
+        if label and value:
+            fields.setdefault(label.get_text(strip=True), value.get_text(" ", strip=True))
+
+    facilities: set[str] = set()
+    facility_parking = ""
+    for dl in soup.select(".facility dl"):
+        if "del" in (dl.get("class") or []):
+            continue
+        name = dl.get_text(strip=True)
+        if name.endswith("車位"):
+            facility_parking = name
+            facilities.add("車位")
+        else:
+            facilities.add(re.sub(r"^\d+", "", name))  # "2陽台" -> "陽台"
+
+    address_el = soup.select_one('[data-gtm-behavior="address"]')
+    community_el = soup.select_one('a[href*="market.591.com.tw"]')
+
+    parking_fee = fields.get("車位租金", "")
     return {
         "text": text,
-        "facilities": {name for name, on in facilities.items() if on},
-        "community": "" if community in ("", "無", "-") else community,
-        "address": address,
-        "parking": parking_type(parking_line) or parking_type(text),
-        "extra_fees": extra_fees(text),
+        "fields": fields,
+        "facilities": facilities,
+        "address": address_el.get_text(strip=True) if address_el else "",
+        "community": community_el.get_text(strip=True) if community_el else "",
+        "community_url": community_el.get("href", "") if community_el else "",
+        "parking": parking_type(fields.get("車位", "")) or parking_type(facility_parking),
+        "extra_fees": _fee(fields.get("管理費", "")) + _fee(parking_fee),
+        "parking_fee_unknown": "另計" in parking_fee and not _fee(parking_fee),
+        "facing": fields.get("朝向", ""),
     }
 
 
@@ -146,22 +145,32 @@ class Scraper:
         for n in range(1, max_pages + 1):
             if not self._open(url if n == 1 else f"{url}&page={n}"):
                 break
-            try:
-                self.page.wait_for_selector("div.item[data-id]", timeout=15000)
-            except Exception:  # noqa: BLE001
-                print(f"[scraper] 列表沒有物件或版面改了：{self.page.url}")
+            if not self._wait("div.item[data-id]"):
+                # Sometimes the list renders late; one slow retry before giving up.
+                self.page.reload(wait_until="domcontentloaded")
+                if not self._wait("div.item[data-id]", 30000):
+                    print(f"[scraper] 列表沒有物件或版面改了：{self.page.url}")
             items, total = parse_list_html(self.page.content())
             out.extend(items)
             if not items or n >= total:
                 break
         return out
 
+    def _wait(self, selector: str, timeout: int = 15000) -> bool:
+        try:
+            self.page.wait_for_selector(selector, timeout=timeout)
+            return True
+        except Exception:  # noqa: BLE001
+            return False
+
     def detail(self, listing: dict) -> dict | None:
+        """Parsed detail page, or None when it never finished rendering."""
         if not self._open(listing["link"]):
             return None
-        text = self.page.inner_text("body")
-        facilities = self.page.evaluate(_FACILITY_JS, FACILITY_NAMES)
-        return parse_detail(text, facilities)
+        if not self._wait(".facility dl") or not self._wait("span.label"):
+            print(f"[scraper] 物件頁沒載入完成，略過：{listing['link']}")
+            return None
+        return parse_detail(self.page.content(), self.page.inner_text("body"))
 
     def dump(self, url: str, path: str) -> None:
         """Save a rendered page, for fixing selectors when 591 changes its layout."""

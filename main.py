@@ -39,6 +39,7 @@ def save_seen(seen: set[str]) -> None:
 
 def collect(cfg: dict, seen: set[str]) -> list[dict]:
     picks: list[dict] = []
+    checked: set[str] = set()  # 591 sometimes lists the same ad twice
     with Scraper(delay_seconds=cfg["request_delay_seconds"]) as s:
         for area in cfg["regions"]:
             for search in cfg["searches"]:
@@ -46,8 +47,9 @@ def collect(cfg: dict, seen: set[str]) -> list[dict]:
                 found = s.search(url, cfg["max_pages_per_search"])
                 print(f"[{COUNTY.get(area['region'])} {search['name']}] 列表 {len(found)} 筆")
                 for x in found:
-                    if x["id"] in seen or not filters.in_districts(x, area["districts"]):
+                    if x["id"] in seen or x["id"] in checked or not filters.in_districts(x, area["districts"]):
                         continue
+                    checked.add(x["id"])
                     if x["price"] > cfg["max_rent"]:
                         continue
                     detail = s.detail(x)
