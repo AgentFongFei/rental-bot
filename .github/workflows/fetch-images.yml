@@ -41,11 +41,13 @@ jobs:
                   if len(d)>20000: open(f"images/{n}/{i:02d}_{os.path.basename(u)[:60]}","wb").write(d)
               except Exception as e: print("skip",u,e)
           PY
-      - name: Push to image-dumps branch
+      - name: Push to images-NAME branch
+        env:
+          NAME: ${{ inputs.name }}
         run: |
           git config user.name "rental-bot"
           git config user.email "rental-bot@users.noreply.github.com"
-          git checkout -B image-dumps
+          git checkout -B images-$NAME
           git add -f images/
           git commit -m "images"
-          git push -f origin image-dumps
+          git push -f origin images-$NAME
