@@ -36,7 +36,7 @@ jobs:
           open(f"images/{n}/urls.txt","w").write("\n".join(urls))
           for i,u in enumerate(urls[:40]):
               try:
-                  req=urllib.request.Request(u,headers={"User-Agent":"Mozilla/5.0"})
+                  req=urllib.request.Request(urllib.parse.quote(u,safe=":/%?=&"),headers={"User-Agent":"Mozilla/5.0"})
                   d=urllib.request.urlopen(req,timeout=20).read()
                   if len(d)>20000: open(f"images/{n}/{i:02d}_{os.path.basename(u)[:60]}","wb").write(d)
               except Exception as e: print("skip",u,e)
