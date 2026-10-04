@@ -30,7 +30,9 @@ jobs:
           import os,re,urllib.parse,urllib.request
           n=os.environ["NAME"]; base=os.environ["URL"]
           h=open(f"images/{n}/page.html",encoding="utf-8",errors="ignore").read()
-          urls=sorted(set(urllib.parse.urljoin(base,u) for u in re.findall(r'(?:src|href|data-src|data-lazy-src)=["\']([^"\']+\.(?:jpe?g|png|webp))',h,re.I)))
+          urls=sorted(set(urllib.parse.urljoin(base,u) for u in re.findall(r'https?://[^"\'\s,]+\.(?:jpe?g|png|webp)',h,re.I)))
+          urls=[u for u in urls if not re.search(r'-\d+x\d+\.',u)]
+          urls.sort(key=lambda u:(0 if re.search(r'配|1F|plan|site',urllib.parse.unquote(u),re.I) else 1,u))
           open(f"images/{n}/urls.txt","w").write("\n".join(urls))
           for i,u in enumerate(urls[:40]):
               try:
