@@ -2,10 +2,22 @@
   "頭份市/昌隆廣場-上賀": {
     "checked": "2026-10-03",
     "location": null,
-    "gate": null,
-    "driveway": {"dir": "西南", "road": "民族路394巷", "level": "推估", "how": "網路摘要（引樂屋網、JR預售屋資訊站），未經街景驗證"},
-    "sources": ["https://hsinchu.housetube.tw/46602"],
-    "evidence": "車道在民族路394巷側朝西南；大門路段（昌隆二街/昌隆一街/民族路394巷）來源未明指，留空",
+    "gate": {
+      "dir": "北",
+      "road": "昌隆二街",
+      "level": "推估",
+      "how": "建商1F配置圖（大廳入口在圖上方，指北針已校正）"
+    },
+    "driveway": {
+      "dir": "南",
+      "road": "",
+      "level": "推估",
+      "how": "建商1F配置圖（車道坡道在圖下方）；與網路摘要說的民族路394巷西南不一致"
+    },
+    "sources": [
+      "https://newvisionad.com.tw/gallery/昌隆廣場-上賀/"
+    ],
+    "evidence": "配置圖指北針約偏右12度；大廳入口朝圖上方≈北；車道斜坡出口朝圖下方≈南。道路名稱由基地位於昌隆二街與民族路394巷轉角推測，非圖上標示",
     "street_view_photos": 0,
     "note": "基地在昌隆二街與民族路394巷交叉口"
   },
@@ -13,8 +25,15 @@
     "checked": "2026-10-03",
     "location": null,
     "gate": null,
-    "driveway": {"dir": "", "road": "和平路", "level": "推估", "how": "文字資料（樂居部落格：車道規劃從和平路進出）"},
-    "sources": ["https://www.leju.com.tw/page_blog/view/1251"],
+    "driveway": {
+      "dir": "",
+      "road": "和平路",
+      "level": "推估",
+      "how": "文字資料（樂居部落格：車道規劃從和平路進出）"
+    },
+    "sources": [
+      "https://www.leju.com.tw/page_blog/view/1251"
+    ],
     "evidence": "只寫車道從和平路進出，未寫朝向，也沒寫大門",
     "street_view_photos": 0,
     "note": ""
