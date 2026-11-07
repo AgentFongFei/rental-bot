@@ -22,7 +22,7 @@ from rentbot.scraper import Scraper, list_url
 
 ROOT = Path(__file__).resolve().parent
 SEEN_PATH = ROOT / "data" / "seen.json"
-COUNTY = {7: "苗栗縣", 4: "新竹市"}
+COUNTY = {7: "苗栗縣", 4: "新竹市", 5: "新竹縣"}
 
 
 def load_seen() -> set[str]:
