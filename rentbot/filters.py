@@ -10,6 +10,9 @@ _RE_GAS_STOVE = re.compile(r"瓦斯爐|爐台|爐具")
 _RE_EMPTY_UNIT = re.compile(r"空屋|無家具|不含家具")
 
 
+_RE_SHARE = re.compile(r"徵室友|找室友|分租|共生|Coliving|雅房", re.I)
+
+
 def in_districts(listing: dict, districts: list[str]) -> bool:
     district = listing.get("district", "")
     return any(district.startswith(d) for d in districts)
@@ -55,6 +58,10 @@ def check(listing: dict, cfg: dict) -> list[str]:
             reasons.append("機械車位")
         elif kind != "平面":
             reasons.append("沒有平面車位")
+    elif req.get("any_parking") and listing.get("parking") not in ("平面", "機械"):
+        reasons.append("沒有車位")
+    if _RE_SHARE.search(listing.get("title", "")):
+        reasons.append("分租／徵室友")
     # Title only: the page body also shows other ads ("推薦物件"), which may say 空屋.
     if _RE_EMPTY_UNIT.search(listing.get("title", "")):
         reasons.append("空屋無家具")

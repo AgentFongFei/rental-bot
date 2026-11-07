@@ -25,7 +25,8 @@ count_extra_fees: true
 require:
   elevator: true       # 電梯
   cooking: true        # 可開伙
-  flat_parking: true   # 平面車位（機械式會被剔除）
+  flat_parking: false  # 平面車位（true 時機械式會被剔除）
+  any_parking: true    # 只要有車位（平面或機械）就好
   bed: true            # 床（床架＋床墊）
   basic_furniture: [衣櫃, 桌椅]   # 至少要有的家具
 
